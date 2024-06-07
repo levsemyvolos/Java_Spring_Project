@@ -4,6 +4,7 @@ import com.example.coursework.model.Card;
 import com.example.coursework.model.User;
 import com.example.coursework.repository.UserRepository;
 import com.example.coursework.service.LearningService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +18,7 @@ public class LearningController {
     private final LearningService learningService;
     private final UserRepository userRepository;
 
+    @Autowired
     public LearningController(LearningService learningService, UserRepository userRepository) {
         this.learningService = learningService;
         this.userRepository = userRepository;
@@ -24,7 +26,6 @@ public class LearningController {
 
     @GetMapping("/get-cards")
     public ResponseEntity<List<Card>> getCardsForLearning() {
-        // Отримуємо фіксованого користувача з бази даних (замініть на реальну логіку пізніше)
         User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -34,7 +35,6 @@ public class LearningController {
 
     @PostMapping("/answer")
     public ResponseEntity<Void> processAnswers(@RequestBody Map<Long, Boolean> answers) {
-        // Отримуємо фіксованого користувача з бази даних
         User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 

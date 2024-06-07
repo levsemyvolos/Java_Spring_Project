@@ -36,4 +36,21 @@ public class UserProgress {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CardStatus status = CardStatus.IN_DECK;
+
+    // Default constructor for JPA
+    public UserProgress() {
+    }
+
+    // Constructor to initialize user and card
+    public UserProgress(User user, Card card) {
+        this.user = user;
+        this.card = card;
+        this.learnedLevel = 0;
+        this.lastUpdated = LocalDateTime.now();
+        this.ease = 2.5; // Default ease factor, adjust as necessary
+        this.due = LocalDateTime.now().plusDays(1); // Initial due date
+        this.interval = 1; // Initial interval
+        this.reps = 0; // Initial repetition count
+        this.status = CardStatus.IN_DECK;
+    }
 }

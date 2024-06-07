@@ -6,8 +6,9 @@ import com.example.coursework.model.User;
 import com.example.coursework.model.UserProgress;
 import com.example.coursework.repository.CardRepository;
 import com.example.coursework.repository.UserProgressRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -17,10 +18,10 @@ import java.util.stream.Collectors;
 public class LearningService {
 
     private static final int MAX_WORDS_IN_DECK = 5;
-    private static final double EASE_FACTOR = 1.5;
     private final CardRepository cardRepository;
     private final UserProgressRepository userProgressRepository;
 
+    @Autowired
     public LearningService(CardRepository cardRepository, UserProgressRepository userProgressRepository) {
         this.cardRepository = cardRepository;
         this.userProgressRepository = userProgressRepository;
@@ -34,97 +35,67 @@ public class LearningService {
                     .map(UserProgress::getCard)
                     .collect(Collectors.toList());
         } else {
-            return getNewCardsForDeck(user);
+            return getNewCardsForDeck(user, cardsInDeck);
         }
     }
 
-    private List<Card> getNewCardsForDeck(User user) {
-        List<UserProgress> readyCards = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.READY);
-        List<UserProgress> cardsForDeck = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.IN_DECK);
-
-        int cardsToAdd = MAX_WORDS_IN_DECK - cardsForDeck.size();
-        Random random = new Random();
-
-        for (UserProgress progress : readyCards) {
-            if (cardsToAdd == 0) {
-                break;
-            }
-            progress.setStatus(CardStatus.IN_DECK);
-            cardsForDeck.add(progress);
-            cardsToAdd--;
-        }
-
-        List<Card> allCards = cardRepository.findAll();
-        List<Card> newCards = new ArrayList<>(allCards);
-        newCards.removeAll(cardsForDeck.stream().map(UserProgress::getCard).toList());
-
-        for (Card card : newCards) {
-            if (cardsToAdd == 0) {
-                break;
-            }
-            UserProgress progress = createProgress(user, card);
-            cardsForDeck.add(progress);
-            cardsToAdd--;
-        }
-
-        userProgressRepository.saveAll(cardsForDeck);
-        return cardsForDeck.stream()
-                .map(UserProgress::getCard)
-                .collect(Collectors.toList());
-    }
-
+    @Transactional
     public void processAnswers(User user, Map<Long, Boolean> answers) {
-        for (Map.Entry<Long, Boolean> answer : answers.entrySet()) {
-            Long cardId = answer.getKey();
-            Boolean isCorrect = answer.getValue();
-
-            UserProgress progress = userProgressRepository.findByUserAndCard(user, cardRepository.findById(cardId).orElseThrow())
-                    .orElseGet(() -> createProgress(user, cardRepository.findById(cardId).orElseThrow()));
-
+        answers.forEach((cardId, isCorrect) -> {
+            UserProgress progress = userProgressRepository.findByUserAndCardId(user.getId(), cardId)
+                    .orElseGet(() -> new UserProgress(user, cardRepository.findById(cardId)
+                            .orElseThrow(() -> new RuntimeException("Card not found"))));
             updateProgress(progress, isCorrect);
-        }
-
-        // Оновлюємо статус карток після обробки відповідей
-        userProgressRepository.updateUserProgressStatus(user, CardStatus.IN_DECK, CardStatus.READY);
+            userProgressRepository.save(progress);
+        });
     }
-
-    private UserProgress createProgress(User user, Card card) {
-        UserProgress progress = new UserProgress();
-        progress.setUser(user);
-        progress.setCard(card);
-        progress.setLearnedLevel(0);
-        progress.setLastUpdated(LocalDateTime.now());
-        progress.setEase(2.5);
-        progress.setInterval(0);
-        progress.setReps(0);
-        progress.setDue(LocalDateTime.now());
-        progress.setStatus(CardStatus.READY);
-        return userProgressRepository.save(progress);
-    }
-
 
     private void updateProgress(UserProgress progress, boolean isCorrect) {
-        LocalDateTime now = LocalDateTime.now();
         if (isCorrect) {
+            progress.setLearnedLevel(progress.getLearnedLevel() + 1);
             progress.setReps(progress.getReps() + 1);
-            progress.setEase(Math.max(1.3, progress.getEase() + 0.1 - (5 - progress.getLearnedLevel()) * (0.08 + (5 - progress.getLearnedLevel()) * 0.02)));
+            progress.setInterval(calculateInterval(progress));
+            progress.setDue(LocalDateTime.now().plusDays(progress.getInterval()));
         } else {
+            progress.setLearnedLevel(0);
             progress.setReps(0);
-            progress.setEase(progress.getEase() - 0.2);
-        }
-
-        if (progress.getReps() <= 1) {
             progress.setInterval(1);
-        } else if (progress.getReps() == 2) {
-            progress.setInterval(6);
-        } else {
-            progress.setInterval((int) Math.round(progress.getEase() * progress.getInterval()));
+            progress.setDue(LocalDateTime.now().plusDays(1));
         }
-
-        progress.setDue(now.plusMinutes(progress.getInterval()));
-        progress.setLearnedLevel(progress.getLearnedLevel() + 1);
-        progress.setLastUpdated(now);
-        userProgressRepository.save(progress);
+        progress.setStatus(CardStatus.READY);
     }
 
+    private int calculateInterval(UserProgress progress) {
+        int interval = progress.getInterval();
+        double easeFactor = 2.5; // Example value, adjust as necessary
+        return (int) (interval * easeFactor);
+    }
+
+    private List<Card> getNewCardsForDeck(User user, List<UserProgress> existingDeck) {
+        List<Card> newDeck = new ArrayList<>(MAX_WORDS_IN_DECK);
+
+        List<UserProgress> readyCards = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.READY);
+        List<Card> newCards = cardRepository.findNewCardsForUser(user.getId());
+
+        Iterator<UserProgress> readyIterator = readyCards.iterator();
+        Iterator<Card> newCardIterator = newCards.iterator();
+
+        boolean useReady = true;
+        while (newDeck.size() < MAX_WORDS_IN_DECK && (readyIterator.hasNext() || newCardIterator.hasNext())) {
+            if (useReady && readyIterator.hasNext()) {
+                newDeck.add(readyIterator.next().getCard());
+            } else if (newCardIterator.hasNext()) {
+                newDeck.add(newCardIterator.next());
+            }
+            useReady = !useReady;
+        }
+
+        newDeck.forEach(card -> {
+            UserProgress progress = new UserProgress(user, card);
+            progress.setStatus(CardStatus.IN_DECK);
+            userProgressRepository.save(progress);
+        });
+
+        return newDeck;
+    }
 }
