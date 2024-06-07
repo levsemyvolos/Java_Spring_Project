@@ -1,6 +1,10 @@
 package com.example.coursework.service;
 
-import com.example.coursework.model.*;
+import com.example.coursework.model.Card;
+import com.example.coursework.model.CardStatus;
+import com.example.coursework.model.User;
+import com.example.coursework.model.UserProgress;
+import com.example.coursework.model.UserCardId;
 import com.example.coursework.repository.CardRepository;
 import com.example.coursework.repository.UserProgressRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +37,7 @@ public class LearningService {
     public List<Card> getCardsForLearning(User user) {
         List<UserProgress> cardsInDeck = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.IN_DECK);
 
-        if (cardsInDeck.size() >= MAX_WORDS_IN_DECK) {
+        if (cardsInDeck.size() == MAX_WORDS_IN_DECK) {
             return cardsInDeck.stream()
                     .sorted(Comparator.comparing(UserProgress::getDue))  // Sort by due date
                     .map(UserProgress::getCard)
@@ -45,21 +49,18 @@ public class LearningService {
 
     @Transactional
     public void processAnswers(User user, Map<Long, Boolean> answers) {
-        List<UserProgress> cardsInDeck = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.IN_DECK);
+        if (answers.size() < MAX_WORDS_IN_DECK) {
+            // If not all answers are provided, do nothing
+            return;
+        }
 
-        // Update progress for cards that received answers
         answers.forEach((cardId, isCorrect) -> {
             UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), cardId))
-                    .orElseThrow(() -> new RuntimeException("Card not found"));
+                    .orElseGet(() -> new UserProgress(user, cardRepository.findById(cardId)
+                            .orElseThrow(() -> new RuntimeException("Card not found"))));
             updateProgress(progress, isCorrect);
             userProgressRepository.save(progress);
         });
-
-        // If all cards received answers, set status to READY
-        if (answers.size() == cardsInDeck.size()) {
-            cardsInDeck.forEach(progress -> progress.setStatus(CardStatus.READY));
-            userProgressRepository.saveAll(cardsInDeck);
-        }
     }
 
     private void updateProgress(UserProgress progress, boolean isCorrect) {
@@ -84,6 +85,7 @@ public class LearningService {
         }
         progress.setLearnedLevel(progress.getLearnedLevel() + (isCorrect ? 1 : 0));
         progress.setLastUpdated(LocalDateTime.now());
+        progress.setStatus(CardStatus.READY);
     }
 
     private List<Card> getNewCardsForDeck(User user, List<UserProgress> existingDeck) {
@@ -92,6 +94,7 @@ public class LearningService {
         List<UserProgress> readyCards = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.READY);
         List<Card> newCards = cardRepository.findNewCardsForUser(user.getId());
 
+        readyCards.sort(Comparator.comparing(UserProgress::getDue)); // Sort ready cards by due date
         Iterator<UserProgress> readyIterator = readyCards.iterator();
         Iterator<Card> newCardIterator = newCards.iterator();
 

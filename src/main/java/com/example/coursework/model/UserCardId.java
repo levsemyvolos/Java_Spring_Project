@@ -1,6 +1,7 @@
 package com.example.coursework.model;
 
 import jakarta.persistence.Embeddable;
+
 import java.io.Serializable;
 import java.util.Objects;
 
@@ -10,7 +11,8 @@ public class UserCardId implements Serializable {
     private Long userId;
     private Long cardId;
 
-    public UserCardId() {}
+    public UserCardId() {
+    }
 
     public UserCardId(Long userId, Long cardId) {
         this.userId = userId;
