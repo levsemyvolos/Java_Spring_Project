@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -15,6 +16,11 @@ import java.util.stream.Collectors;
 public class LearningService {
 
     private static final int MAX_WORDS_IN_DECK = 5;
+    private static final double EASE_INCREMENT = 0.15;
+    private static final double EASE_DECREMENT = 0.2;
+    private static final double MIN_EASE = 1.3;
+    private static final int MIN_INTERVAL = 1;  // in days
+    private static final int MAX_INTERVAL = 365;  // in days
     private final CardRepository cardRepository;
     private final UserProgressRepository userProgressRepository;
 
@@ -27,8 +33,9 @@ public class LearningService {
     public List<Card> getCardsForLearning(User user) {
         List<UserProgress> cardsInDeck = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.IN_DECK);
 
-        if (cardsInDeck.size() == MAX_WORDS_IN_DECK) {
+        if (cardsInDeck.size() >= MAX_WORDS_IN_DECK) {
             return cardsInDeck.stream()
+                    .sorted(Comparator.comparing(UserProgress::getDue))  // Sort by due date
                     .map(UserProgress::getCard)
                     .collect(Collectors.toList());
         } else {
@@ -37,12 +44,11 @@ public class LearningService {
     }
 
     @Transactional
-    public void processAnswers(User user, Map<String, Boolean> answers) {
-        answers.forEach((wordId, isCorrect) -> {
-            Card card = cardRepository.findById(Long.parseLong(wordId))
-                    .orElseThrow(() -> new RuntimeException("Card not found"));
-            UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), card.getId()))
-                    .orElseGet(() -> new UserProgress(user, card));
+    public void processAnswers(User user, Map<Long, Boolean> answers) {
+        answers.forEach((cardId, isCorrect) -> {
+            UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), cardId))
+                    .orElseGet(() -> new UserProgress(user, cardRepository.findById(cardId)
+                            .orElseThrow(() -> new RuntimeException("Card not found"))));
             updateProgress(progress, isCorrect);
             userProgressRepository.save(progress);
         });
@@ -50,23 +56,24 @@ public class LearningService {
 
     private void updateProgress(UserProgress progress, boolean isCorrect) {
         if (isCorrect) {
-            progress.setLearnedLevel(progress.getLearnedLevel() + 1);
             progress.setReps(progress.getReps() + 1);
-            progress.setInterval(calculateInterval(progress));
-            progress.setDue(LocalDateTime.now().plusDays(progress.getInterval()));
+            if (progress.getReps() == 1) {
+                progress.setInterval(1);
+            } else if (progress.getReps() == 2) {
+                progress.setInterval(6);
+            } else {
+                progress.setInterval((int) Math.max(MIN_INTERVAL, Math.min(progress.getInterval() * progress.getEase(), MAX_INTERVAL)));
+            }
+            progress.setEase(Math.max(MIN_EASE, progress.getEase() + EASE_INCREMENT));
         } else {
-            progress.setLearnedLevel(0);
             progress.setReps(0);
             progress.setInterval(1);
-            progress.setDue(LocalDateTime.now().plusDays(1));
+            progress.setEase(Math.max(MIN_EASE, progress.getEase() - EASE_DECREMENT));
         }
-        progress.setStatus(CardStatus.READY);
-    }
-
-    private int calculateInterval(UserProgress progress) {
-        int interval = progress.getInterval();
-        double easeFactor = 2.5; // Example value, adjust as necessary
-        return (int) (interval * easeFactor);
+        progress.setLearnedLevel(progress.getLearnedLevel() + (isCorrect ? 1 : 0));
+        progress.setDue(LocalDateTime.now().plus(progress.getInterval(), ChronoUnit.DAYS));
+        progress.setStatus(CardStatus.READY);  // Change the status to READY after updating progress
+        progress.setLastUpdated(LocalDateTime.now());
     }
 
     private List<Card> getNewCardsForDeck(User user, List<UserProgress> existingDeck) {
@@ -89,8 +96,10 @@ public class LearningService {
         }
 
         newDeck.forEach(card -> {
-            UserProgress progress = new UserProgress(user, card);
+            UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), card.getId()))
+                    .orElseGet(() -> new UserProgress(user, card));
             progress.setStatus(CardStatus.IN_DECK);
+            progress.setLastUpdated(LocalDateTime.now());
             userProgressRepository.save(progress);
         });
 
