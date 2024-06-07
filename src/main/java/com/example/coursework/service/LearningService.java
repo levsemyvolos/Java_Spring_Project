@@ -45,13 +45,21 @@ public class LearningService {
 
     @Transactional
     public void processAnswers(User user, Map<Long, Boolean> answers) {
+        List<UserProgress> cardsInDeck = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.IN_DECK);
+
+        // Update progress for cards that received answers
         answers.forEach((cardId, isCorrect) -> {
             UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), cardId))
-                    .orElseGet(() -> new UserProgress(user, cardRepository.findById(cardId)
-                            .orElseThrow(() -> new RuntimeException("Card not found"))));
+                    .orElseThrow(() -> new RuntimeException("Card not found"));
             updateProgress(progress, isCorrect);
             userProgressRepository.save(progress);
         });
+
+        // If all cards received answers, set status to READY
+        if (answers.size() == cardsInDeck.size()) {
+            cardsInDeck.forEach(progress -> progress.setStatus(CardStatus.READY));
+            userProgressRepository.saveAll(cardsInDeck);
+        }
     }
 
     private void updateProgress(UserProgress progress, boolean isCorrect) {
@@ -59,20 +67,22 @@ public class LearningService {
             progress.setReps(progress.getReps() + 1);
             if (progress.getReps() == 1) {
                 progress.setInterval(1);
+                progress.setDue(LocalDateTime.now().plusMinutes(10));
             } else if (progress.getReps() == 2) {
                 progress.setInterval(6);
+                progress.setDue(LocalDateTime.now().plusMinutes(30));
             } else {
                 progress.setInterval((int) Math.max(MIN_INTERVAL, Math.min(progress.getInterval() * progress.getEase(), MAX_INTERVAL)));
+                progress.setDue(LocalDateTime.now().plus(progress.getInterval(), ChronoUnit.DAYS));
             }
             progress.setEase(Math.max(MIN_EASE, progress.getEase() + EASE_INCREMENT));
         } else {
             progress.setReps(0);
             progress.setInterval(1);
             progress.setEase(Math.max(MIN_EASE, progress.getEase() - EASE_DECREMENT));
+            progress.setDue(LocalDateTime.now().plusMinutes(1));
         }
         progress.setLearnedLevel(progress.getLearnedLevel() + (isCorrect ? 1 : 0));
-        progress.setDue(LocalDateTime.now().plus(progress.getInterval(), ChronoUnit.DAYS));
-        progress.setStatus(CardStatus.READY);  // Change the status to READY after updating progress
         progress.setLastUpdated(LocalDateTime.now());
     }
 
