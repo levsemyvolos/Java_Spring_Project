@@ -37,11 +37,12 @@ public class LearningService {
     }
 
     @Transactional
-    public void processAnswers(User user, Map<Long, Boolean> answers) {
-        answers.forEach((cardId, isCorrect) -> {
-            UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), cardId))
-                    .orElseGet(() -> new UserProgress(user, cardRepository.findById(cardId)
-                            .orElseThrow(() -> new RuntimeException("Card not found"))));
+    public void processAnswers(User user, Map<String, Boolean> answers) {
+        answers.forEach((wordId, isCorrect) -> {
+            Card card = cardRepository.findById(Long.parseLong(wordId))
+                    .orElseThrow(() -> new RuntimeException("Card not found"));
+            UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), card.getId()))
+                    .orElseGet(() -> new UserProgress(user, card));
             updateProgress(progress, isCorrect);
             userProgressRepository.save(progress);
         });

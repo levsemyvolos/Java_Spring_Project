@@ -34,7 +34,7 @@ public class LearningController {
     }
 
     @PostMapping("/answer")
-    public ResponseEntity<Void> processAnswers(@RequestBody Map<Long, Boolean> answers) {
+    public ResponseEntity<Void> processAnswers(@RequestBody Map<String, Boolean> answers) {
         User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -42,3 +42,4 @@ public class LearningController {
         return ResponseEntity.ok().build();
     }
 }
+
