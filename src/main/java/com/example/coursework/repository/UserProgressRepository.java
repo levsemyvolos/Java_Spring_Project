@@ -1,16 +1,13 @@
 package com.example.coursework.repository;
 
-import com.example.coursework.model.Card;
-import com.example.coursework.model.User;
-import com.example.coursework.model.UserProgress;
-import com.example.coursework.model.CardStatus;
+import com.example.coursework.model.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface UserProgressRepository extends JpaRepository<UserProgress, Long> {
+public interface UserProgressRepository extends JpaRepository<UserProgress, UserCardId> {
 
     List<UserProgress> findByUserAndStatus(User user, CardStatus status);
 

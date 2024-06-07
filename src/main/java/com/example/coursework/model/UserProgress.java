@@ -2,7 +2,6 @@ package com.example.coursework.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -10,15 +9,16 @@ import java.time.LocalDateTime;
 @Data
 public class UserProgress {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @EmbeddedId
+    private UserCardId id;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @MapsId("userId")
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @MapsId("cardId")
     @JoinColumn(name = "card_id", nullable = false)
     private Card card;
 
@@ -43,6 +43,7 @@ public class UserProgress {
 
     // Constructor to initialize user and card
     public UserProgress(User user, Card card) {
+        this.id = new UserCardId(user.getId(), card.getId());
         this.user = user;
         this.card = card;
         this.learnedLevel = 0;

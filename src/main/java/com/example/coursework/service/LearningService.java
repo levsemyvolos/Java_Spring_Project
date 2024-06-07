@@ -1,9 +1,6 @@
 package com.example.coursework.service;
 
-import com.example.coursework.model.Card;
-import com.example.coursework.model.CardStatus;
-import com.example.coursework.model.User;
-import com.example.coursework.model.UserProgress;
+import com.example.coursework.model.*;
 import com.example.coursework.repository.CardRepository;
 import com.example.coursework.repository.UserProgressRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +39,7 @@ public class LearningService {
     @Transactional
     public void processAnswers(User user, Map<Long, Boolean> answers) {
         answers.forEach((cardId, isCorrect) -> {
-            UserProgress progress = userProgressRepository.findByUserAndCardId(user.getId(), cardId)
+            UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), cardId))
                     .orElseGet(() -> new UserProgress(user, cardRepository.findById(cardId)
                             .orElseThrow(() -> new RuntimeException("Card not found"))));
             updateProgress(progress, isCorrect);
