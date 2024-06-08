@@ -1,5 +1,6 @@
 package com.example.coursework.service;
 
+import com.example.coursework.dto.AnswerResultDto;
 import com.example.coursework.dto.CardProgressDto;
 import com.example.coursework.model.Card;
 import com.example.coursework.model.CardStatus;
@@ -54,7 +55,7 @@ public class LearningService {
                     })
                     .collect(Collectors.toList());
         } else {
-            List<Card> newDeck = getNewCardsForDeck(user, cardsInDeck);
+            List<Card> newDeck = getNewCardsForDeck(user);
             return newDeck.stream()
                     .map(card -> {
                         Optional<UserProgress> progress = userProgressRepository.findByUserAndCard(user, card);
@@ -73,18 +74,41 @@ public class LearningService {
     }
 
     @Transactional
-    public void processAnswers(User user, Map<Long, Boolean> answers) {
+    public List<AnswerResultDto> processAnswers(User user, Map<Long, Boolean> answers) {
         if (answers.size() < MAX_WORDS_IN_DECK) {
-            return;
+            return Collections.emptyList();
         }
 
-        answers.forEach((cardId, isCorrect) -> {
+        List<UserProgress> cardsInDeck = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.IN_DECK);
+        List<AnswerResultDto> results = new ArrayList<>();
+
+        for (int i = 0; i < cardsInDeck.size(); i++) {
+            Long cardId = cardsInDeck.get(i).getCard().getId();
+            boolean isCorrect = answers.get(cardId);
+
             UserProgress progress = userProgressRepository.findByUserAndCardId(user.getId(), cardId)
-                    .orElseGet(() -> new UserProgress(user, cardRepository.findById(cardId)
-                            .orElseThrow(() -> new RuntimeException("Card not found"))));
+                    .orElseThrow(() -> new RuntimeException("Card not found"));
             updateProgress(progress, isCorrect);
             userProgressRepository.save(progress);
-        });
+
+            AnswerResultDto result = new AnswerResultDto();
+            result.setCardId(cardId);
+            result.setWord(progress.getCard().getWord());
+            result.setTranslation(progress.getCard().getTranslation());
+            result.setIsCorrect(isCorrect);
+            result.setDueFormatted(timeFormattingService.formatTimeUntil(progress.getDue()));
+
+            results.add(result);
+        }
+
+        // Перевіряємо, чи це остання картка
+        if (!cardsInDeck.isEmpty()) {
+            // Додаємо прапорець isLastCard до останнього result
+            AnswerResultDto lastResult = results.get(results.size() - 1);
+            lastResult.setIsLastCard(true);
+        }
+
+        return results;
     }
 
     private void updateProgress(UserProgress progress, boolean isCorrect) {
@@ -107,14 +131,12 @@ public class LearningService {
             progress.setEase(Math.max(MIN_EASE, progress.getEase() - EASE_DECREMENT));
             progress.setDue(LocalDateTime.now().plusMinutes(1));
         }
-        progress.setDue(LocalDateTime.now().plusMinutes(progress.getInterval()));
-
         progress.setLearnedLevel(progress.getLearnedLevel() + (isCorrect ? 1 : 0));
         progress.setLastAnswered(LocalDateTime.now());
         progress.setStatus(CardStatus.READY);
     }
 
-    private List<Card> getNewCardsForDeck(User user, List<UserProgress> existingDeck) {
+    private List<Card> getNewCardsForDeck(User user) {
         List<Card> newDeck = new ArrayList<>(MAX_WORDS_IN_DECK);
 
         List<UserProgress> readyCards = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.READY);
@@ -162,11 +184,9 @@ public class LearningService {
             }
         } else {
             progress.setReps(0);
-            double decreaseFactor = 1 - (progress.getEase() - MIN_EASE) / (2.5 - MIN_EASE); // Чим вищий ease, тим менший decreaseFactor
-            interval = (int) Math.round(progress.getInterval() * decreaseFactor);
-            interval = Math.max(interval, MIN_INTERVAL);
+            interval = 1; // 1 minute
         }
-        return interval; // Повертаємо лише інтервал, без додавання часу
+        return interval;
     }
 
 }
