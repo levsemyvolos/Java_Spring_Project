@@ -1,5 +1,6 @@
 package com.example.coursework.rest;
 
+import com.example.coursework.dto.AnswerResultDto;
 import com.example.coursework.dto.CardProgressDto;
 import com.example.coursework.model.User;
 import com.example.coursework.repository.UserRepository;
@@ -34,11 +35,11 @@ public class LearningController {
     }
 
     @PostMapping("/answer")
-    public ResponseEntity<Void> processAnswers(@RequestBody Map<Long, Boolean> answers) {
+    public ResponseEntity<List<AnswerResultDto>> processAnswers(@RequestBody Map<Long, Boolean> answers) {
         User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        learningService.processAnswers(user, answers);
-        return ResponseEntity.ok().build();
+        List<AnswerResultDto> results = learningService.processAnswers(user, answers);
+        return ResponseEntity.ok(results); // Повертаємо список результатів
     }
 }

@@ -10,11 +10,14 @@ public class TimeFormattingService {
 
     public String formatTimeAgo(LocalDateTime dateTime) {
         LocalDateTime now = LocalDateTime.now();
+        long secondsAgo = ChronoUnit.SECONDS.between(dateTime, now);
         long minutesAgo = ChronoUnit.MINUTES.between(dateTime, now);
         long hoursAgo = ChronoUnit.HOURS.between(dateTime, now);
         long daysAgo = ChronoUnit.DAYS.between(dateTime, now);
 
-        if (minutesAgo < 60) {
+        if (secondsAgo < 60) {
+            return "щойно"; // Якщо менше хвилини тому
+        } else if (minutesAgo < 60) {
             return formatMinutes(minutesAgo) + " назад";
         } else if (hoursAgo < 24) {
             return formatHours(hoursAgo) + " назад";
