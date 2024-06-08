@@ -25,8 +25,8 @@ public class UserProgress {
     @Column(name = "learned_level")
     private int learnedLevel;
 
-    @Column(name = "last_updated")
-    private LocalDateTime lastUpdated;
+    @Column(name = "last_answered")
+    private LocalDateTime lastAnswered;
 
     private double ease;
     private LocalDateTime due;
@@ -35,7 +35,7 @@ public class UserProgress {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private CardStatus status = CardStatus.IN_DECK;
+    private CardStatus status;
 
     // Default constructor for JPA
     public UserProgress() {
@@ -47,11 +47,10 @@ public class UserProgress {
         this.user = user;
         this.card = card;
         this.learnedLevel = 0;
-        this.lastUpdated = LocalDateTime.now();
-        this.ease = 2.5; // Default ease factor, adjust as necessary
-        this.due = LocalDateTime.now().plusDays(1); // Initial due date
-        this.interval = 1; // Initial interval
-        this.reps = 0; // Initial repetition count
+        this.ease = 2.5;
+        this.due = LocalDateTime.now().plusMinutes(10);
+        this.interval = 1;
+        this.reps = 0;
         this.status = CardStatus.IN_DECK;
     }
 }

@@ -25,6 +25,9 @@ public class Card {
     private String translation;
 
     @Column(nullable = false)
+    private String synonyms;
+
+    @Column(nullable = false)
     private String type;
 
     @OneToMany(mappedBy = "card", cascade = CascadeType.ALL)

@@ -1,6 +1,6 @@
 package com.example.coursework.rest;
 
-import com.example.coursework.model.Card;
+import com.example.coursework.dto.CardProgressDto;
 import com.example.coursework.model.User;
 import com.example.coursework.repository.UserRepository;
 import com.example.coursework.service.LearningService;
@@ -25,11 +25,11 @@ public class LearningController {
     }
 
     @GetMapping("/get-cards")
-    public ResponseEntity<List<Card>> getCardsForLearning() {
+    public ResponseEntity<List<CardProgressDto>> getCardsForLearning() {
         User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        List<Card> cards = learningService.getCardsForLearning(user);
+        List<CardProgressDto> cards = learningService.getCardsForLearning(user);
         return ResponseEntity.ok(cards);
     }
 

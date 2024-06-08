@@ -1,5 +1,6 @@
 package com.example.coursework.service;
 
+import com.example.coursework.dto.CardProgressDto;
 import com.example.coursework.model.Card;
 import com.example.coursework.model.CardStatus;
 import com.example.coursework.model.User;
@@ -7,6 +8,7 @@ import com.example.coursework.model.UserProgress;
 import com.example.coursework.model.UserCardId;
 import com.example.coursework.repository.CardRepository;
 import com.example.coursework.repository.UserProgressRepository;
+import com.example.coursework.mapper.CardProgressMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,35 +29,57 @@ public class LearningService {
     private static final int MAX_INTERVAL = 365;  // in days
     private final CardRepository cardRepository;
     private final UserProgressRepository userProgressRepository;
+    private final CardProgressMapper cardProgressMapper;
+    private final TimeFormattingService timeFormattingService;
 
     @Autowired
-    public LearningService(CardRepository cardRepository, UserProgressRepository userProgressRepository) {
+    public LearningService(CardRepository cardRepository, UserProgressRepository userProgressRepository,
+                           CardProgressMapper cardProgressMapper, TimeFormattingService timeFormattingService) {
         this.cardRepository = cardRepository;
         this.userProgressRepository = userProgressRepository;
+        this.cardProgressMapper = cardProgressMapper;
+        this.timeFormattingService = timeFormattingService;
     }
 
-    public List<Card> getCardsForLearning(User user) {
+    public List<CardProgressDto> getCardsForLearning(User user) {
         List<UserProgress> cardsInDeck = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.IN_DECK);
 
         if (cardsInDeck.size() == MAX_WORDS_IN_DECK) {
             return cardsInDeck.stream()
-                    .sorted(Comparator.comparing(UserProgress::getDue))  // Sort by due date
-                    .map(UserProgress::getCard)
+                    .sorted(Comparator.comparing(UserProgress::getDue))
+                    .map(up -> {
+                        CardProgressDto dto = cardProgressMapper.toDto(up.getCard(), user, up);
+                        formatTimeFields(dto, up);
+                        return dto;
+                    })
                     .collect(Collectors.toList());
         } else {
-            return getNewCardsForDeck(user, cardsInDeck);
+            List<Card> newDeck = getNewCardsForDeck(user, cardsInDeck);
+            return newDeck.stream()
+                    .map(card -> {
+                        Optional<UserProgress> progress = userProgressRepository.findByUserAndCard(user, card);
+                        CardProgressDto dto = cardProgressMapper.toDto(card, user, progress.orElse(null));
+                        if (progress.isPresent()) {
+                            formatTimeFields(dto, progress.get());
+                        } else {
+                            // Set default due dates for new cards
+                            dto.setDueFormattedTrue(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(10)));
+                            dto.setDueFormattedFalse(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(1)));
+                        }
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
         }
     }
 
     @Transactional
     public void processAnswers(User user, Map<Long, Boolean> answers) {
         if (answers.size() < MAX_WORDS_IN_DECK) {
-            // If not all answers are provided, do nothing
             return;
         }
 
         answers.forEach((cardId, isCorrect) -> {
-            UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), cardId))
+            UserProgress progress = userProgressRepository.findByUserAndCardId(user.getId(), cardId)
                     .orElseGet(() -> new UserProgress(user, cardRepository.findById(cardId)
                             .orElseThrow(() -> new RuntimeException("Card not found"))));
             updateProgress(progress, isCorrect);
@@ -84,7 +108,7 @@ public class LearningService {
             progress.setDue(LocalDateTime.now().plusMinutes(1));
         }
         progress.setLearnedLevel(progress.getLearnedLevel() + (isCorrect ? 1 : 0));
-        progress.setLastUpdated(LocalDateTime.now());
+        progress.setLastAnswered(LocalDateTime.now());
         progress.setStatus(CardStatus.READY);
     }
 
@@ -94,7 +118,7 @@ public class LearningService {
         List<UserProgress> readyCards = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.READY);
         List<Card> newCards = cardRepository.findNewCardsForUser(user.getId());
 
-        readyCards.sort(Comparator.comparing(UserProgress::getDue)); // Sort ready cards by due date
+        readyCards.sort(Comparator.comparing(UserProgress::getDue));
         Iterator<UserProgress> readyIterator = readyCards.iterator();
         Iterator<Card> newCardIterator = newCards.iterator();
 
@@ -112,10 +136,39 @@ public class LearningService {
             UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), card.getId()))
                     .orElseGet(() -> new UserProgress(user, card));
             progress.setStatus(CardStatus.IN_DECK);
-            progress.setLastUpdated(LocalDateTime.now());
+            progress.setLastAnswered(LocalDateTime.now());
             userProgressRepository.save(progress);
         });
 
         return newDeck;
     }
+
+    private void formatTimeFields(CardProgressDto dto, UserProgress progress) {
+        if (progress.getLastAnswered() != null) {
+            dto.setLastAnsweredFormatted(timeFormattingService.formatTimeAgo(progress.getLastAnswered()));
+        } else {
+            dto.setLastAnsweredFormatted("Нове слово");
+        }
+        dto.setDueFormattedTrue(timeFormattingService.formatTimeUntil(calculateDueTime(progress, true)));
+        dto.setDueFormattedFalse(timeFormattingService.formatTimeUntil(calculateDueTime(progress, false)));
+    }
+
+    private LocalDateTime calculateDueTime(UserProgress progress, boolean isCorrect) {
+        int interval;
+        if (isCorrect) {
+            progress.setReps(progress.getReps() + 1);
+            if (progress.getReps() == 1) {
+                interval = 1;
+            } else if (progress.getReps() == 2) {
+                interval = 6;
+            } else {
+                interval = (int) Math.max(MIN_INTERVAL, Math.min(progress.getInterval() * progress.getEase(), MAX_INTERVAL));
+            }
+        } else {
+            progress.setReps(0);
+            interval = 1;
+        }
+        return LocalDateTime.now().plusMinutes(interval);
+    }
+
 }
