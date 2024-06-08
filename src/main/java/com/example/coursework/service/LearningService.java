@@ -50,7 +50,7 @@ public class LearningService {
                     .sorted(Comparator.comparing(UserProgress::getDue))
                     .map(up -> {
                         CardProgressDto dto = cardProgressMapper.toDto(up.getCard(), user, up);
-                        formatTimeFields(dto, up);
+                        formatTimeFields(dto, up); // Форматуємо час в DTO
                         return dto;
                     })
                     .collect(Collectors.toList());
@@ -61,7 +61,7 @@ public class LearningService {
                         Optional<UserProgress> progress = userProgressRepository.findByUserAndCard(user, card);
                         CardProgressDto dto = cardProgressMapper.toDto(card, user, progress.orElse(null));
                         if (progress.isPresent()) {
-                            formatTimeFields(dto, progress.get());
+                            formatTimeFields(dto, progress.get());  // Форматуємо час в DTO
                         } else {
                             // Set default due dates for new cards
                             dto.setDueFormattedTrue(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(10)));
@@ -167,6 +167,11 @@ public class LearningService {
     }
 
     private void formatTimeFields(CardProgressDto dto, UserProgress progress) {
+        if (progress.getLastAnswered() != null) {
+            dto.setLastAnsweredFormatted(timeFormattingService.formatTimeAgo(progress.getLastAnswered())); // Використовуємо formatTimeAgo
+        } else {
+            dto.setLastAnsweredFormatted("Нове слово");
+        }
         dto.setDueFormattedTrue(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(calculateDueTime(progress, true))));
         dto.setDueFormattedFalse(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(calculateDueTime(progress, false))));
     }

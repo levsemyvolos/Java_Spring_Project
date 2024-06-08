@@ -1,77 +1,108 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const path = window.location.pathname;
-    if (path.endsWith('/learn')) {
-        initLearnPage();
-    } else if (path.endsWith('/result')) {
-        initResultPage();
-    }
-});
+document.addEventListener('DOMContentLoaded', initLearnPage);
 
 function initLearnPage() {
-    const sentenceContainer = document.getElementById('sentenceContainer');
+    const sentenceContainer = document.getElementById('sentence');
     const translationContainer = document.getElementById('translation');
     const synonymsContainer = document.getElementById('synonyms');
-    const counterContainer = document.getElementById('counter');
+    const counterContainer = document.getElementById('cardCounter');
     const nextButton = document.getElementById('nextButton');
-    const accountButton = document.getElementById('accountButton');
+    const lastAnsweredContainer = document.getElementById('lastAnswered');
+    const learningPage = document.getElementById('learningPage');
+    const resultPage = document.getElementById('resultPage');
+    const resultContainer = document.getElementById('resultContainer');
 
     let cards = [];
     let currentCardIndex = 0;
     let answers = {};
 
-    accountButton.addEventListener('click', () => {
-        // Redirect to account page (not implemented)
-        alert('Redirect to account page');
-    });
-
-    nextButton.addEventListener('click', () => {
-        if (currentCardIndex < cards.length) {
-            showCard(cards[currentCardIndex]);
-        } else {
-            submitAnswers();
-        }
-    });
-
     fetch('/api/learn/get-cards')
         .then(response => response.json())
         .then(data => {
             cards = data;
-            showCard(cards[currentCardIndex]);
+            if (cards.length > 0) {
+                // Ініціалізуємо answers true значеннями
+                cards.forEach(card => {
+                    answers[card.cardId] = true;
+                });
+                updateUI();
+            } else {
+                sentenceContainer.textContent = "No words to learn.";
+            }
         })
-        .catch(error => console.error('Error fetching cards:', error));
+        .catch(error => {
+            console.error('Error fetching cards:', error);
+            sentenceContainer.textContent = "Error loading words.";
+        });
 
-    function showCard(card) {
-        sentenceContainer.innerHTML = card.sentence.replace(card.word, `<input type="text" id="answerInput">`);
-        translationContainer.textContent = card.translation;
-        synonymsContainer.textContent = card.synonyms;
+    function updateUI() {
+        const card = cards[currentCardIndex];
+
+        sentenceContainer.innerHTML = card.sentence.replace(
+            card.word,
+            `<input type="text" id="answerInput" class="form-control d-inline" autocomplete="off">`
+        );
+        translationContainer.textContent = `Translation: ${card.translation}`;
+        synonymsContainer.textContent = `Synonyms: ${card.synonyms}`;
         counterContainer.textContent = `${currentCardIndex + 1}/${cards.length}`;
 
-        const answerInput = document.getElementById('answerInput');
-        answerInput.focus();
+        lastAnsweredContainer.textContent = card.lastAnsweredFormatted === "Новое слово"
+            ? "New word"
+            : `Last answered: ${card.lastAnsweredFormatted}`;
 
-        answerInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                checkAnswer(card, answerInput.value);
+        let inputField = document.getElementById("answerInput");
+        inputField.style.backgroundColor = "";
+        inputField.value = "";
+        inputField.placeholder = "";
+        adjustInputWidth(inputField, card.word);
+        inputField.addEventListener("keyup", function (event) {
+            if (event.key === "Enter") {
+                checkAnswer(card, inputField.value);
             }
         });
+        inputField.focus();
     }
 
     function checkAnswer(card, userAnswer) {
         if (userAnswer.trim().toLowerCase() === card.word.toLowerCase()) {
-            answers[card.cardId] = true;
-            sentenceContainer.innerHTML = card.sentence.replace(card.word, `<span class="correct">${card.word}</span>`);
-            currentCardIndex++;
+            // Відповідь правильна (answers[card.cardId] вже true)
+            document.getElementById("answerInput").outerHTML = `<span class="correct">${card.word}</span>`;
+            lastAnsweredContainer.textContent = `Next repetition: ${card.dueFormattedTrue}`;
+            nextCard();
         } else {
-            answers[card.cardId] = false;
-            sentenceContainer.innerHTML = card.sentence.replace(card.word, `<span class="incorrect">${card.word}</span>`);
+            // Відповідь неправильна
+            answers[card.cardId] = false; // Встановлюємо false, оскільки була підказка
+            let inputField = document.getElementById("answerInput");
+            inputField.style.backgroundColor = "rgba(255, 0, 0, 0.3)";
+            inputField.value = '';
+            inputField.placeholder = card.word;
+            inputField.focus();
         }
-        setTimeout(() => {
-            if (currentCardIndex < cards.length) {
-                showCard(cards[currentCardIndex]);
-            } else {
-                submitAnswers();
-            }
-        }, 2000);
+    }
+
+    function nextCard() {
+        currentCardIndex++;
+        if (currentCardIndex < cards.length) {
+            updateUI();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        learningPage.style.display = 'none';
+        resultPage.style.display = 'block';
+
+        resultContainer.innerHTML = '';
+        for (const cardId in answers) {
+            const isCorrect = answers[cardId];
+            const card = cards.find(c => c.cardId === parseInt(cardId));
+            const resultDiv = document.createElement('div');
+            resultDiv.textContent = `${card.word} - ${card.translation} (${isCorrect ? 'Correct' : 'Incorrect'})`;
+            resultDiv.classList.add(isCorrect ? 'correct' : 'incorrect');
+            resultContainer.appendChild(resultDiv);
+        }
+
+        submitAnswers();
     }
 
     function submitAnswers() {
@@ -82,32 +113,21 @@ function initLearnPage() {
             },
             body: JSON.stringify(answers)
         })
-            .then(response => response.json())
-            .then(() => {
-                window.location.href = '/result';
-            })
             .catch(error => console.error('Error submitting answers:', error));
     }
-}
 
-function initResultPage() {
-    const resultContainer = document.getElementById('resultContainer');
-    const accountButton = document.getElementById('accountButton');
+    // Adjust input width based on the length of the word
+    function adjustInputWidth(input, word) {
+        const tempSpan = document.createElement("span");
+        tempSpan.style.visibility = "hidden";
+        tempSpan.style.whiteSpace = "nowrap";
+        tempSpan.style.fontSize = getComputedStyle(input).fontSize;
+        tempSpan.textContent = word;
+        document.body.appendChild(tempSpan);
+        const width = tempSpan.offsetWidth; // Add some padding
+        document.body.removeChild(tempSpan);
+        input.style.width = `${width}px`;
+    }
 
-    accountButton.addEventListener('click', () => {
-        // Redirect to account page (not implemented)
-        alert('Redirect to account page');
-    });
-
-    fetch('/api/learn/answer')
-        .then(response => response.json())
-        .then(data => {
-            data.forEach(result => {
-                const resultDiv = document.createElement('div');
-                resultDiv.innerHTML = `${result.word} - ${result.translation}`;
-                resultDiv.classList.add(result.isCorrect ? 'correct' : 'incorrect');
-                resultContainer.appendChild(resultDiv);
-            });
-        })
-        .catch(error => console.error('Error fetching results:', error));
+    nextButton.addEventListener('click', () => checkAnswer(cards[currentCardIndex], document.getElementById('answerInput').value));
 }

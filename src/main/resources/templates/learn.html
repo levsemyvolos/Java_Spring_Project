@@ -3,20 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learn English</title>
+    <title>Word Learning</title>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-<div class="header">
-    <button id="accountButton">Account</button>
+<header>
+    <a href="/stat" id="statButton">Statistics</a>
+</header>
+
+<div class="container">
+    <div id="learningPage">
+        <div id="cardCounter"></div>
+        <p id="sentence"></p>
+        <p id="translation"></p>
+        <p id="synonyms"></p>
+        <button id="nextButton">Check</button>
+        <div id="lastAnswered"></div>
+    </div>
+
+    <div id="resultPage" style="display: none;">
+        <h2>Results</h2>
+        <div id="resultContainer"></div>
+        <button onclick="location.reload()">Try again</button>
+    </div>
 </div>
-<div class="main">
-    <div id="sentenceContainer"></div>
-    <div id="translation"></div>
-    <div id="synonyms"></div>
-    <div id="counter"></div>
-    <button id="nextButton">Next</button>
-</div>
+
 <script src="/js/script.js"></script>
 </body>
 </html>
