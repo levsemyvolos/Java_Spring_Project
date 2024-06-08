@@ -19,8 +19,10 @@ public class CardProgressMapper {
         dto.setSynonyms(card.getSynonyms());
         dto.setUserId(user.getId());
 
-        if (progress != null) {
+        if (progress != null && progress.getLastAnswered() != null) {
             dto.setLastAnsweredFormatted(progress.getLastAnswered().toString());
+        } else {
+            dto.setLastAnsweredFormatted("Нове слово");
         }
 
         return dto;

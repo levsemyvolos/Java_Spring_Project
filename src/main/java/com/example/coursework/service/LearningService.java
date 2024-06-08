@@ -107,6 +107,8 @@ public class LearningService {
             progress.setEase(Math.max(MIN_EASE, progress.getEase() - EASE_DECREMENT));
             progress.setDue(LocalDateTime.now().plusMinutes(1));
         }
+        progress.setDue(LocalDateTime.now().plusMinutes(progress.getInterval()));
+
         progress.setLearnedLevel(progress.getLearnedLevel() + (isCorrect ? 1 : 0));
         progress.setLastAnswered(LocalDateTime.now());
         progress.setStatus(CardStatus.READY);
@@ -136,7 +138,6 @@ public class LearningService {
             UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), card.getId()))
                     .orElseGet(() -> new UserProgress(user, card));
             progress.setStatus(CardStatus.IN_DECK);
-            progress.setLastAnswered(LocalDateTime.now());
             userProgressRepository.save(progress);
         });
 
@@ -144,31 +145,28 @@ public class LearningService {
     }
 
     private void formatTimeFields(CardProgressDto dto, UserProgress progress) {
-        if (progress.getLastAnswered() != null) {
-            dto.setLastAnsweredFormatted(timeFormattingService.formatTimeAgo(progress.getLastAnswered()));
-        } else {
-            dto.setLastAnsweredFormatted("Нове слово");
-        }
-        dto.setDueFormattedTrue(timeFormattingService.formatTimeUntil(calculateDueTime(progress, true)));
-        dto.setDueFormattedFalse(timeFormattingService.formatTimeUntil(calculateDueTime(progress, false)));
+        dto.setDueFormattedTrue(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(calculateDueTime(progress, true))));
+        dto.setDueFormattedFalse(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(calculateDueTime(progress, false))));
     }
 
-    private LocalDateTime calculateDueTime(UserProgress progress, boolean isCorrect) {
+    private int calculateDueTime(UserProgress progress, boolean isCorrect) {
         int interval;
         if (isCorrect) {
             progress.setReps(progress.getReps() + 1);
             if (progress.getReps() == 1) {
-                interval = 1;
+                interval = 10; // 10 minutes
             } else if (progress.getReps() == 2) {
-                interval = 6;
+                interval = 30; // 30 minutes
             } else {
                 interval = (int) Math.max(MIN_INTERVAL, Math.min(progress.getInterval() * progress.getEase(), MAX_INTERVAL));
             }
         } else {
             progress.setReps(0);
-            interval = 1;
+            double decreaseFactor = 1 - (progress.getEase() - MIN_EASE) / (2.5 - MIN_EASE); // Чим вищий ease, тим менший decreaseFactor
+            interval = (int) Math.round(progress.getInterval() * decreaseFactor);
+            interval = Math.max(interval, MIN_INTERVAL);
         }
-        return LocalDateTime.now().plusMinutes(interval);
+        return interval; // Повертаємо лише інтервал, без додавання часу
     }
 
 }
