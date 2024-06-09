@@ -39,7 +39,7 @@ public class UserService {
         Role userRole = roleRepository.findByName("USER")
                 .orElseThrow(() -> new RuntimeException("Роль 'USER' не знайдена в базі даних."));
 
-        user.setRoles(Collections.singleton(userRole)); // Призначаємо роль користувачеві
+        user.setRoles(Collections.singleton(userRole));
 
         return userRepository.save(user);
     }
@@ -48,7 +48,6 @@ public class UserService {
         return userRepository.findByUsername(username);
     }
 
-    // Допоміжний метод для отримання поточного користувача
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {

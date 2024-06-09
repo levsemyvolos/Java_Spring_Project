@@ -76,10 +76,9 @@ public class LearningService {
 
         List<UserProgress> cardsInDeck = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.IN_DECK);
 
-        // Перевірка, чи ключі answers відповідають cardId
         for (Long cardId : answers.keySet()) {
             if (cardsInDeck.stream().noneMatch(up -> up.getCard().getId().equals(cardId))) {
-                return Collections.emptyList(); // Повертаємо порожній список, якщо ключі не співпадають
+                return Collections.emptyList();
             }
         }
 
@@ -103,9 +102,7 @@ public class LearningService {
             results.add(result);
         }
 
-        // Перевіряємо, чи це остання картка
         if (!cardsInDeck.isEmpty()) {
-            // Додаємо прапорець isLastCard до останнього result
             AnswerResultDto lastResult = results.get(results.size() - 1);
             lastResult.setIsLastCard(true);
         }
@@ -169,7 +166,7 @@ public class LearningService {
 
     private void formatTimeFields(CardProgressDto dto, UserProgress progress) {
         if (progress.getLastAnswered() != null) {
-            dto.setLastAnsweredFormatted(timeFormattingService.formatTimeAgo(progress.getLastAnswered())); // Використовуємо formatTimeAgo
+            dto.setLastAnsweredFormatted(timeFormattingService.formatTimeAgo(progress.getLastAnswered()));
         } else {
             dto.setLastAnsweredFormatted("Нове слово");
         }
@@ -182,15 +179,15 @@ public class LearningService {
         if (isCorrect) {
             progress.setReps(progress.getReps() + 1);
             if (progress.getReps() == 1) {
-                interval = 10; // 10 minutes
+                interval = 10;
             } else if (progress.getReps() == 2) {
-                interval = 30; // 30 minutes
+                interval = 30;
             } else {
                 interval = (int) Math.max(MIN_INTERVAL, Math.min(progress.getInterval() * progress.getEase(), MAX_INTERVAL));
             }
         } else {
             progress.setReps(0);
-            interval = 1; // 1 minute
+            interval = 1;
         }
         return interval;
     }

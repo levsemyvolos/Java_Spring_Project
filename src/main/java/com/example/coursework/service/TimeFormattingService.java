@@ -16,7 +16,7 @@ public class TimeFormattingService {
         long daysAgo = ChronoUnit.DAYS.between(dateTime, now);
 
         if (secondsAgo < 60) {
-            return "щойно"; // Якщо менше хвилини тому
+            return "щойно";
         } else if (minutesAgo < 60) {
             return formatMinutes(minutesAgo) + " назад";
         } else if (hoursAgo < 24) {

@@ -40,9 +40,9 @@ public class LoggingAspect {
         Map<String, String> requestParams = getRequestParams(request);
 
         // Логуємо інформацію перед викликом методу
-//        logger.info("{} - Before invocation: {}.{} with parameters: {}, request params: {}, userId: {}, userRole: {}",
-//                layer, joinPoint.getSignature().getDeclaringTypeName(), methodName, Arrays.toString(joinPoint.getArgs()),
-//                requestParams, userService.getCurrentUser().getId(), userService.getCurrentUser().getRoles());
+        logger.info("{} - Before invocation: {}.{} with parameters: {}, request params: {}, userId: {}, userRole: {}",
+                layer, joinPoint.getSignature().getDeclaringTypeName(), methodName, Arrays.toString(joinPoint.getArgs()),
+                requestParams, userService.getCurrentUser().getId(), userService.getCurrentUser().getRoles());
 
         // Якщо є JSON-тіло, логуємо його
         if (request.getContentType() != null && request.getContentType().contains("application/json")) {

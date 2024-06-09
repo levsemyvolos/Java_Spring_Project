@@ -13,7 +13,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/cards")
-// @PreAuthorize("hasRole('ADMIN')")
 @Loggable
 public class CardController {
 

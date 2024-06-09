@@ -37,12 +37,11 @@ public class StatsService {
         LocalDate today = now.toLocalDate();
 
         if (!today.isEqual(stats.getLastUpdatedDate())) {
-            // Reset daily and weekly stats if it's a new day
             stats.setWordsLearnedToday(0);
-            if (today.getDayOfWeek().getValue() == 1) { // Monday
+            if (today.getDayOfWeek().getValue() == 1) {
                 stats.setWordsLearnedThisWeek(0);
             }
-            if (today.getDayOfMonth() == 1) { // First day of the month
+            if (today.getDayOfMonth() == 1) {
                 stats.setWordsLearnedThisMonth(0);
             }
         }

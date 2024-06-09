@@ -35,11 +35,11 @@ public class SecurityConfiguration {
         http
                 .authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers("/register/**", "/index", "/css/**", "/js/**").permitAll()
-                        .requestMatchers("/api/cards/**").hasAuthority("ADMIN") // Захищаємо всі API-запити
-                        .requestMatchers("/api/learn/**", "/learn", "/stats").authenticated() // Захищаємо сторінки
+                        .requestMatchers("/api/cards/**").hasAuthority("ADMIN")
+                        .requestMatchers("/api/learn/**", "/learn", "/stats").authenticated()
                         .anyRequest().authenticated()
                 )
-//                .httpBasic(Customizer.withDefaults()) // Налаштування Basic Authentication
+                .httpBasic(Customizer.withDefaults())
                 .formLogin(form -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
@@ -49,8 +49,8 @@ public class SecurityConfiguration {
                 .logout(logout -> logout
                         .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
                         .permitAll()
-                );
-//                .csrf(AbstractHttpConfigurer::disable); // Вимкнення CSRF для спрощення (тільки для розробки!)
+                )
+                .csrf(AbstractHttpConfigurer::disable);
         return http.build();
     }
 
