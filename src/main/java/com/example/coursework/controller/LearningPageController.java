@@ -33,7 +33,7 @@ public class LearningPageController {
         return "stats";
     }
     @GetMapping("/learn")
-    public String learningPage(Model model) {
+    public String learningPage() {
         return "learn";
     }
 

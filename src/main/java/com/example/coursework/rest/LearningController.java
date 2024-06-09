@@ -8,7 +8,6 @@ import com.example.coursework.service.LearningService;
 import com.example.coursework.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,6 +40,6 @@ public class LearningController {
         User user = userService.getCurrentUser();
 
         List<AnswerResultDto> results = learningService.processAnswers(user, answers);
-        return ResponseEntity.ok(results); // Повертаємо список результатів
+        return ResponseEntity.ok(results);
     }
 }
