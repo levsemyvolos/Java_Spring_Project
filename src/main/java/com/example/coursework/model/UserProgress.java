@@ -53,4 +53,20 @@ public class UserProgress {
         this.reps = 0;
         this.status = CardStatus.IN_DECK;
     }
+
+    @Override
+    public String toString() {
+        return "UserProgress{" +
+                "id=" + id +
+                ", user_id='" + user.getId() + '\'' +
+                ", card_id='" + card.getId() + '\'' +
+                ", learnedLevel='" + learnedLevel + '\'' +
+                ", lastAnswered='" + lastAnswered + '\'' +
+                ", ease='" + ease + '\'' +
+                ", due='" + due + '\'' +
+                ", interval='" + interval + '\'' +
+                ", reps=" + reps + '\'' +
+                ", status=" + status +
+                '}'; // Виключено поле progress
+    }
 }

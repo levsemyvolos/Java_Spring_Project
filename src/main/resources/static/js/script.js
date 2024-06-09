@@ -20,7 +20,6 @@ function initLearnPage() {
         .then(data => {
             cards = data;
             if (cards.length > 0) {
-                // Ініціалізуємо answers true значеннями
                 cards.forEach(card => {
                     answers[card.cardId] = true;
                 });
@@ -37,7 +36,10 @@ function initLearnPage() {
     function updateUI() {
         const card = cards[currentCardIndex];
 
-        sentenceContainer.innerHTML = card.sentence.replace(
+        // Remove asterisks from the sentence
+        const cleanedSentence = card.sentence.replace(/\*/g, '');
+
+        sentenceContainer.innerHTML = cleanedSentence.replace(
             card.word,
             `<input type="text" id="answerInput" class="form-control d-inline" autocomplete="off">`
         );
@@ -64,19 +66,22 @@ function initLearnPage() {
 
     function checkAnswer(card, userAnswer) {
         if (userAnswer.trim().toLowerCase() === card.word.toLowerCase()) {
-            // Відповідь правильна (answers[card.cardId] вже true)
-            document.getElementById("answerInput").outerHTML = `<span class="correct">${card.word}</span>`;
-            lastAnsweredContainer.textContent = `Next repetition: ${card.dueFormattedTrue}`;
-            nextCard();
+            showIntermediateStage(card);
         } else {
-            // Відповідь неправильна
-            answers[card.cardId] = false; // Встановлюємо false, оскільки була підказка
+            answers[card.cardId] = false;
             let inputField = document.getElementById("answerInput");
-            inputField.style.backgroundColor = "rgba(255, 0, 0, 0.3)";
+            inputField.classList.add("alert-danger");
             inputField.value = '';
             inputField.placeholder = card.word;
             inputField.focus();
         }
+    }
+
+    function showIntermediateStage(card) {
+        document.getElementById("answerInput").outerHTML = `<span class="correct">${card.word}</span>`;
+        lastAnsweredContainer.textContent = `Next repetition: ${card.dueFormattedTrue}`;
+        nextButton.disabled = false;
+        nextButton.addEventListener('click', nextCard, { once: true });
     }
 
     function nextCard() {
@@ -86,6 +91,7 @@ function initLearnPage() {
         } else {
             showResults();
         }
+        nextButton.disabled = false;
     }
 
     function showResults() {
@@ -97,7 +103,7 @@ function initLearnPage() {
             const isCorrect = answers[cardId];
             const card = cards.find(c => c.cardId === parseInt(cardId));
             const resultDiv = document.createElement('div');
-            resultDiv.textContent = `${card.word} - ${card.translation} (${isCorrect ? 'Correct' : 'Incorrect'})`;
+            resultDiv.textContent = `${card.word} - ${card.translation}`;
             resultDiv.classList.add(isCorrect ? 'correct' : 'incorrect');
             resultContainer.appendChild(resultDiv);
         }
@@ -116,7 +122,6 @@ function initLearnPage() {
             .catch(error => console.error('Error submitting answers:', error));
     }
 
-    // Adjust input width based on the length of the word
     function adjustInputWidth(input, word) {
         const tempSpan = document.createElement("span");
         tempSpan.style.visibility = "hidden";
@@ -124,10 +129,8 @@ function initLearnPage() {
         tempSpan.style.fontSize = getComputedStyle(input).fontSize;
         tempSpan.textContent = word;
         document.body.appendChild(tempSpan);
-        const width = tempSpan.offsetWidth; // Add some padding
+        const width = tempSpan.offsetWidth;
         document.body.removeChild(tempSpan);
         input.style.width = `${width}px`;
     }
-
-    nextButton.addEventListener('click', () => checkAnswer(cards[currentCardIndex], document.getElementById('answerInput').value));
 }

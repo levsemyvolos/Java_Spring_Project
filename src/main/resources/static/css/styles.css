@@ -1,35 +1,16 @@
 body {
-    font-family: sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-    background-color: #f0f0f0;
+    font-family: 'Roboto', Arial, Helvetica, sans-serif;
+    background-color: #181A1B;
+    color: #EBE6E0;
 }
 
-header {
-    width: 100%;
-    background-color: #f8f9fa;
-    padding: 10px;
-    text-align: right;
-    box-sizing: border-box;
+.navbar-dark .navbar-brand,
+.navbar-dark .navbar-nav .nav-item .nav-link {
+    color: #EBE6E0;
 }
 
-.container {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    max-width: 600px;
-    width: 90%;
-    margin: 20px auto;
-}
-
-#sentence {
-    font-size: 1.2em;
-    margin-bottom: 10px;
+.navbar-dark .navbar-brand:hover {
+    color: #EBE6E0;
 }
 
 #answerInput {
@@ -37,25 +18,128 @@ header {
     font-size: 24px;
     margin-top: 10px;
     display: inline-block;
-    transition: background-color 0.3s ease, width 0.3s ease;
-    box-sizing: content-box; /*  Додаємо box-sizing */
+    box-sizing: content-box;
+    background-color: #181A1B;
+    color: #EBE6E0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-button {
-    padding: 10px 20px;
-    margin: 10px;
-    border: none;
-    border-radius: 4px;
-    background-color: #4CAF50;
-    color: white;
-    cursor: pointer;
+/* Стилі для навігаційної панелі */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #222;
+    padding: 10px;
+    color: #EBE6E0;
+}
+
+/* Стилі для контейнерів */
+.container {
+    background-color: #222;
+    color: #EBE6E0;
+    padding: 20px;
+    border: 1px solid #55554F;
+    border-radius: 5px;
+    text-align: center;
+    max-width: 600px;
+    width: 90%;
+    margin: 20px auto;
+}
+
+/* Специфічні стилі для сторінки /learn */
+#learningPage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#sentence {
+    font-size: 1.8em;
+    margin-bottom: 10px;
+}
+
+#translation {
+    color: #007bff;
+    font-size: 1.2em;
+}
+
+#synonyms {
     font-size: 1em;
 }
 
+#lastAnswered {
+    font-size: 0.9em;
+    color: #6c757d;
+}
+
+#nextButton {
+    margin-top: 20px;
+    background-color: #15409e;
+    border-color: #15409e;
+}
+
 .correct {
-    color: green;
+    color: rgba(1, 251, 143, 0.5);
 }
 
 .incorrect {
-    color: red;
+    color: rgba(255, 85, 0, 0.73);
+}
+
+.form-control {
+    background-color: #181A1B;
+    color: #EBE6E0;
+    border: 1px solid #55554f;
+}
+
+#answerInput::placeholder {
+    color: rgba(255, 85, 0, 0.73);
+}
+
+.form-control:focus {
+    background-color: #181A1B;
+    color: #EBE6E0;
+    border: 1px solid #07459C;
+    outline: none;
+    box-shadow: 0 0 0 3px #1B3153;
+}
+
+.card {
+    background-color: #181A1B;
+    border: 1px solid #55554F;
+}
+
+
+.card-header {
+    background-color: #181A1B;
+    border-bottom: none;
+}
+
+.card-header h2 {
+    font-weight: bold;
+    color: #EBE6E0;
+}
+
+.form-control {
+    background-color: #181A1B;
+    color: #EBE6E0;
+    border: 1px solid #55554f;
+}
+
+.form-control::placeholder {
+    color: #6A6660;
+}
+
+.btn-primary {
+    background-color: #15409e;
+    border-color: #15409e;
+}
+
+.form-control:focus {
+    background-color: #181A1B;
+    color: #EBE6E0;
+    border: 1px solid #07459C;
+    outline: none;
+    box-shadow: 0 0 0 3px #1B3153;
 }

@@ -1,5 +1,6 @@
 package com.example.coursework.rest;
 
+import com.example.coursework.annotations.Loggable;
 import com.example.coursework.model.Card;
 import com.example.coursework.service.CardService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,8 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/cards")
+// @PreAuthorize("hasRole('ADMIN')")
+@Loggable
 public class CardController {
 
     private final CardService cardService;
@@ -59,6 +62,6 @@ public class CardController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCard(@PathVariable Long id) {
         cardService.deleteCard(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok().build();
     }
 }

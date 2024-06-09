@@ -1,5 +1,6 @@
 package com.example.coursework.service;
 
+import com.example.coursework.annotations.Loggable;
 import com.example.coursework.dto.AnswerResultDto;
 import com.example.coursework.dto.CardProgressDto;
 import com.example.coursework.model.Card;
@@ -15,11 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Loggable
 public class LearningService {
 
     private static final int MAX_WORDS_IN_DECK = 5;
@@ -34,8 +35,7 @@ public class LearningService {
     private final TimeFormattingService timeFormattingService;
 
     @Autowired
-    public LearningService(CardRepository cardRepository, UserProgressRepository userProgressRepository,
-                           CardProgressMapper cardProgressMapper, TimeFormattingService timeFormattingService) {
+    public LearningService(CardRepository cardRepository, UserProgressRepository userProgressRepository, CardProgressMapper cardProgressMapper, TimeFormattingService timeFormattingService) {
         this.cardRepository = cardRepository;
         this.userProgressRepository = userProgressRepository;
         this.cardProgressMapper = cardProgressMapper;
@@ -46,30 +46,25 @@ public class LearningService {
         List<UserProgress> cardsInDeck = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.IN_DECK);
 
         if (cardsInDeck.size() == MAX_WORDS_IN_DECK) {
-            return cardsInDeck.stream()
-                    .sorted(Comparator.comparing(UserProgress::getDue))
-                    .map(up -> {
-                        CardProgressDto dto = cardProgressMapper.toDto(up.getCard(), user, up);
-                        formatTimeFields(dto, up); // Форматуємо час в DTO
-                        return dto;
-                    })
-                    .collect(Collectors.toList());
+            return cardsInDeck.stream().sorted(Comparator.comparing(UserProgress::getDue)).map(up -> {
+                CardProgressDto dto = cardProgressMapper.toDto(up.getCard(), user, up);
+                formatTimeFields(dto, up); // Форматуємо час в DTO
+                return dto;
+            }).collect(Collectors.toList());
         } else {
             List<Card> newDeck = getNewCardsForDeck(user);
-            return newDeck.stream()
-                    .map(card -> {
-                        Optional<UserProgress> progress = userProgressRepository.findByUserAndCard(user, card);
-                        CardProgressDto dto = cardProgressMapper.toDto(card, user, progress.orElse(null));
-                        if (progress.isPresent()) {
-                            formatTimeFields(dto, progress.get());  // Форматуємо час в DTO
-                        } else {
-                            // Set default due dates for new cards
-                            dto.setDueFormattedTrue(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(10)));
-                            dto.setDueFormattedFalse(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(1)));
-                        }
-                        return dto;
-                    })
-                    .collect(Collectors.toList());
+            return newDeck.stream().map(card -> {
+                Optional<UserProgress> progress = userProgressRepository.findByUserAndCard(user, card);
+                CardProgressDto dto = cardProgressMapper.toDto(card, user, progress.orElse(null));
+                if (progress.isPresent()) {
+                    formatTimeFields(dto, progress.get());  // Форматуємо час в DTO
+                } else {
+                    // Set default due dates for new cards
+                    dto.setDueFormattedTrue(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(10)));
+                    dto.setDueFormattedFalse(timeFormattingService.formatTimeUntil(LocalDateTime.now().plusMinutes(1)));
+                }
+                return dto;
+            }).collect(Collectors.toList());
         }
     }
 
@@ -80,14 +75,21 @@ public class LearningService {
         }
 
         List<UserProgress> cardsInDeck = userProgressRepository.findUserProgressWithCardByUserAndStatus(user, CardStatus.IN_DECK);
+
+        // Перевірка, чи ключі answers відповідають cardId
+        for (Long cardId : answers.keySet()) {
+            if (cardsInDeck.stream().noneMatch(up -> up.getCard().getId().equals(cardId))) {
+                return Collections.emptyList(); // Повертаємо порожній список, якщо ключі не співпадають
+            }
+        }
+
         List<AnswerResultDto> results = new ArrayList<>();
 
-        for (int i = 0; i < cardsInDeck.size(); i++) {
-            Long cardId = cardsInDeck.get(i).getCard().getId();
+        for (UserProgress userProgress : cardsInDeck) {
+            Long cardId = userProgress.getCard().getId();
             boolean isCorrect = answers.get(cardId);
 
-            UserProgress progress = userProgressRepository.findByUserAndCardId(user.getId(), cardId)
-                    .orElseThrow(() -> new RuntimeException("Card not found"));
+            UserProgress progress = userProgressRepository.findByUserAndCardId(user.getId(), cardId).orElseThrow(() -> new RuntimeException("Card not found"));
             updateProgress(progress, isCorrect);
             userProgressRepository.save(progress);
 
@@ -122,7 +124,7 @@ public class LearningService {
                 progress.setDue(LocalDateTime.now().plusMinutes(30));
             } else {
                 progress.setInterval((int) Math.max(MIN_INTERVAL, Math.min(progress.getInterval() * progress.getEase(), MAX_INTERVAL)));
-                progress.setDue(LocalDateTime.now().plus(progress.getInterval(), ChronoUnit.DAYS));
+                progress.setDue(LocalDateTime.now().plusDays(progress.getInterval()));
             }
             progress.setEase(Math.max(MIN_EASE, progress.getEase() + EASE_INCREMENT));
         } else {
@@ -157,8 +159,7 @@ public class LearningService {
         }
 
         newDeck.forEach(card -> {
-            UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), card.getId()))
-                    .orElseGet(() -> new UserProgress(user, card));
+            UserProgress progress = userProgressRepository.findById(new UserCardId(user.getId(), card.getId())).orElseGet(() -> new UserProgress(user, card));
             progress.setStatus(CardStatus.IN_DECK);
             userProgressRepository.save(progress);
         });

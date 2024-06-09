@@ -1,6 +1,11 @@
 package com.example.coursework.controller;
 
 import com.example.coursework.dto.CardProgressDto;
+import com.example.coursework.model.User;
+import com.example.coursework.model.UserStats;
+import com.example.coursework.service.LearningService;
+import com.example.coursework.service.StatsService;
+import com.example.coursework.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -12,26 +17,34 @@ import java.util.Arrays;
 import java.util.List;
 
 @Controller
-@RequestMapping("/learn")
+@RequestMapping
 public class LearningPageController {
 
     private final RestTemplate restTemplate;
+    private final StatsService statsService;
+    private final UserService userService;
+    private final LearningService learningService;
 
     @Autowired
-    public LearningPageController(RestTemplate restTemplate) {
+    public LearningPageController(RestTemplate restTemplate, StatsService statsService, UserService userService, LearningService learningService) {
         this.restTemplate = restTemplate;
+        this.statsService = statsService;
+        this.userService = userService;
+        this.learningService = learningService;
     }
 
-    @GetMapping
+    @GetMapping("/stats")
+    public String statsPage(Model model) {
+        User user = userService.getCurrentUser();
+
+        statsService.updateStats(user);
+        UserStats stats = statsService.getStatsForUser(user);
+        model.addAttribute("stats", stats);
+        return "stats";
+    }
+    @GetMapping("/learn")
     public String learningPage(Model model) {
-        CardProgressDto[] cardsArray = restTemplate.getForObject("http://localhost:8080/api/learn/get-cards", CardProgressDto[].class);
-        List<CardProgressDto> cards = Arrays.asList(cardsArray);
-        model.addAttribute("cards", cards);
         return "learn";
     }
 
-    @GetMapping("/results")
-    public String resultsPage() {
-        return "results";
-    }
 }

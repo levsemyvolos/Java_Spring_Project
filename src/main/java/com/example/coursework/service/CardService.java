@@ -1,5 +1,6 @@
 package com.example.coursework.service;
 
+import com.example.coursework.annotations.Loggable;
 import com.example.coursework.model.Card;
 import com.example.coursework.repository.CardRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Loggable
 public class CardService {
 
     private final CardRepository cardRepository;
