@@ -1,0 +1,71 @@
+body {
+    font-family: 'Roboto', Arial, Helvetica, sans-serif;
+    background-color: #181A1B;
+    color: #EBE6E0;
+}
+
+.navbar-dark .navbar-brand,
+.navbar-dark .navbar-nav .nav-item .nav-link {
+    color: #EBE6E0;
+}
+
+.navbar-dark .navbar-brand:hover {
+    color: #EBE6E0;
+}
+
+.card {
+    background-color: #181A1B;
+    border: 1px solid #55554F;
+}
+
+
+.card-header {
+    background-color: #181A1B;
+    border-bottom: none;
+}
+
+.card-header h2 {
+    font-weight: bold;
+    color: #EBE6E0;
+}
+
+.form-control {
+    background-color: #181A1B;
+    color: #EBE6E0;
+    border: 1px solid #55554f;
+}
+
+.form-control::placeholder {
+    color: #6A6660;
+}
+
+.btn-primary {
+    background-color: #15409e;
+    border-color: #15409e;
+}
+
+.alert-success {
+    background-color: rgba(1, 251, 143, 0.25);
+    color: rgb(240, 255, 240);
+    border-color: rgba(138, 222, 184, 0.25);
+}
+
+.alert-danger {
+    background-color: rgba(255, 0, 0, 0.25);
+    color: #fff0f0;
+    border-color: rgba(210, 0, 21, 0.25);
+}
+
+.form-control:focus {
+    background-color: #181A1B;
+    color: #EBE6E0;
+    border: 1px solid #07459C;
+    outline: none;
+    box-shadow: 0 0 0 3px #1B3153;
+}
+
+.alert-info {
+    background-color: #0C4C5A;
+    color: #E1DBD4;
+    border-color: #0D7388;
+}
